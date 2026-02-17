@@ -1,3 +1,6 @@
+# Janus Docker Image Build and Push Workflow
+# 自动构建 Janus Docker 镜像并推送到 Docker Hub 和阿里云镜像仓库
+
 name: Build Janus Docker
 
 on:
@@ -6,9 +9,11 @@ on:
       # 匹配 janus-v 开头的标签，例如: janus-v1.4.0
       - 'janus-v*'
     paths:
+      # 当以下路径发生变化时触发
       - 'Dockerfile'
       - '.github/workflows/janus-docker.yml'
   workflow_dispatch:
+    # 支持手动触发
     inputs:
       version:
         description: 'Janus version to build (e.g., 1.4.0)'
@@ -32,12 +37,15 @@ on:
           - warning
           - debug
 
+# 添加权限配置
 permissions:
   contents: write
   packages: write
 
 env:
+  # 应用名称
   APP_NAME: janus
+  # 镜像名称
   IMAGE_NAME: bytedesk/janus
   ALIYUN_IMAGE_NAME: registry.cn-hangzhou.aliyuncs.com/bytedesk/janus
 
@@ -49,10 +57,11 @@ jobs:
     steps:
       # 1. 检出代码
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
+      # 2. 提取版本号
       - name: Extract version
         id: version
         run: |
@@ -65,9 +74,11 @@ jobs:
           echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
           echo "Building Janus version: ${VERSION}"
 
+      # 3. 设置 QEMU (支持多平台构建)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.6.0
 
+      # 4. 设置 Docker Buildx
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3.11.1
@@ -77,6 +88,7 @@ jobs:
             image=moby/buildkit:latest
             network=host
 
+          # 5. 登录 Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -84,6 +96,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
           logout: false
 
+      # 6. 登录阿里云 Docker Registry
       - name: Login to Aliyun Docker Registry
         uses: docker/login-action@v3
         with:
@@ -92,6 +105,7 @@ jobs:
           password: ${{ secrets.ALIYUN_DOCKER_PASSWORD }}
           logout: false
 
+      # 7. 准备构建元数据
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -109,6 +123,7 @@ jobs:
             org.opencontainers.image.vendor=ByteDesk
             maintainer=ByteDesk <270580156@qq.com>
 
+          # 8. 构建并推送到阿里云 Docker Registry
       - name: Build and push to Aliyun Docker Registry
         uses: docker/build-push-action@v6.18.0
         with:
@@ -131,6 +146,7 @@ jobs:
             VCS_REF=${{ github.sha }}
             VERSION=${{ steps.version.outputs.VERSION }}
 
+          # 9. 构建并推送到 Docker Hub
       - name: Build and push to Docker Hub
         uses: docker/build-push-action@v6.18.0
         with:
@@ -153,6 +169,7 @@ jobs:
             VCS_REF=${{ github.sha }}
             VERSION=${{ steps.version.outputs.VERSION }}
 
+          # 10. 创建 GitHub Release（仅在推送标签时）
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/janus-v')
         uses: softprops/action-gh-release@v1
@@ -186,6 +203,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 11. 输出构建信息
       - name: Build Summary
         run: |
           echo "## 🎉 Janus Docker 镜像构建完成" >> $GITHUB_STEP_SUMMARY
@@ -205,6 +223,7 @@ jobs:
           echo "docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+  # 可选：测试构建的镜像
   test-image:
     name: Test Janus Docker Image
     needs: build-and-push
@@ -212,6 +231,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false'
 
     steps:
+      # 1. 提取版本号
       - name: Extract version
         id: version
         run: |
@@ -222,6 +242,7 @@ jobs:
           fi
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
+      # 2. 拉取并测试 Docker Hub 镜像
       - name: Pull and test Docker Hub image
         run: |
           docker pull bytedesk/janus:${{ steps.version.outputs.VERSION }}
@@ -232,6 +253,7 @@ jobs:
           docker stop janus-test || true
           docker rm janus-test || true
 
+      # 3. 拉取并测试阿里云镜像
       - name: Pull and test Aliyun image
         run: |
           docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:${{ steps.version.outputs.VERSION }}
