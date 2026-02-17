@@ -50,13 +50,13 @@ The image starts Janus directly (`CMD ["janus"]`).
 
 ```bash
 docker run -d \
-	--name janus \
-	-p 8088:8088 \
-	-p 8188:8188 \
-	-p 10000-10200:10000-10200/udp \
-	-e TZ=Asia/Shanghai \
-	--restart=unless-stopped \
-	bytedesk/janus:latest
+  --name janus \
+  -p 8088:8088 \
+  -p 8188:8188 \
+  -p 10000-10200:10000-10200/udp \
+  -e TZ=Asia/Shanghai \
+  --restart=unless-stopped \
+  bytedesk/janus:latest
 ```
 
 ## Configuration
@@ -67,12 +67,12 @@ To customize configuration, mount your config directory:
 
 ```bash
 docker run -d \
-	--name janus \
-	-v $(pwd)/janus-conf:/usr/local/etc/janus \
-	-p 8088:8088 \
-	-p 8188:8188 \
-	-p 10000-10200:10000-10200/udp \
-	bytedesk/janus:latest
+  --name janus \
+  -v $(pwd)/janus-conf:/usr/local/etc/janus \
+  -p 8088:8088 \
+  -p 8188:8188 \
+  -p 10000-10200:10000-10200/udp \
+  bytedesk/janus:latest
 ```
 
 Check logs:
@@ -88,8 +88,8 @@ This repository uses GitHub Actions workflow at `.github/workflows/janus-docker.
 - Tag trigger: `janus-v*` (example: `janus-v1.4.0`)
 - Manual trigger: `workflow_dispatch` with `version` and `push_to_registry`
 - Registries:
-	- `bytedesk/janus`
-	- `registry.cn-hangzhou.aliyuncs.com/bytedesk/janus`
+  - `bytedesk/janus`
+  - `registry.cn-hangzhou.aliyuncs.com/bytedesk/janus`
 
 Example release tag:
 
@@ -129,8 +129,8 @@ Adjust these to match your deployed Janus configuration.
 
 Issues and pull requests are welcome.
 
-- Repository: https://github.com/Bytedesk/bytedesk-janus
-- Docker Hub: https://hub.docker.com/r/bytedesk/janus
+- Repository: [Bytedesk/bytedesk-janus](https://github.com/Bytedesk/bytedesk-janus)
+- Docker Hub: [bytedesk/janus](https://hub.docker.com/r/bytedesk/janus)
 
 ## License
 

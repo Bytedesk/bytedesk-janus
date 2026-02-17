@@ -50,13 +50,13 @@ docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:latest
 
 ```bash
 docker run -d \
-	--name janus \
-	-p 8088:8088 \
-	-p 8188:8188 \
-	-p 10000-10200:10000-10200/udp \
-	-e TZ=Asia/Shanghai \
-	--restart=unless-stopped \
-	bytedesk/janus:latest
+  --name janus \
+  -p 8088:8088 \
+  -p 8188:8188 \
+  -p 10000-10200:10000-10200/udp \
+  -e TZ=Asia/Shanghai \
+  --restart=unless-stopped \
+  bytedesk/janus:latest
 ```
 
 ## 配置说明
@@ -67,12 +67,12 @@ Janus 配置由构建阶段 `make configs` 生成，并安装在 `/usr/local/etc
 
 ```bash
 docker run -d \
-	--name janus \
-	-v $(pwd)/janus-conf:/usr/local/etc/janus \
-	-p 8088:8088 \
-	-p 8188:8188 \
-	-p 10000-10200:10000-10200/udp \
-	bytedesk/janus:latest
+  --name janus \
+  -v $(pwd)/janus-conf:/usr/local/etc/janus \
+  -p 8088:8088 \
+  -p 8188:8188 \
+  -p 10000-10200:10000-10200/udp \
+  bytedesk/janus:latest
 ```
 
 查看运行日志：
@@ -88,8 +88,8 @@ docker logs -f janus
 - 标签触发：`janus-v*`（例如 `janus-v1.4.0`）
 - 手动触发：`workflow_dispatch`（支持 `version`、`push_to_registry`）
 - 发布仓库：
-	- `bytedesk/janus`
-	- `registry.cn-hangzhou.aliyuncs.com/bytedesk/janus`
+  - `bytedesk/janus`
+  - `registry.cn-hangzhou.aliyuncs.com/bytedesk/janus`
 
 发布示例：
 
@@ -129,8 +129,8 @@ Janus 端口最终以 `janus.jcfg` 与各插件配置为准。常见端口如下
 
 欢迎提交 Issue 和 Pull Request。
 
-- 仓库地址：https://github.com/Bytedesk/bytedesk-janus
-- Docker Hub：https://hub.docker.com/r/bytedesk/janus
+- 仓库地址：[Bytedesk/bytedesk-janus](https://github.com/Bytedesk/bytedesk-janus)
+- Docker Hub：[bytedesk/janus](https://hub.docker.com/r/bytedesk/janus)
 
 ## 许可证
 
