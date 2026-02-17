@@ -1,8 +1,30 @@
-name: Docker Image CI Muti Platform Prod
+name: Build Janus Docker
 
 on:
+  push:
+    tags:
+      # 匹配 janus-v 开头的标签，例如: janus-v0.0.1
+      - 'janus-v*'
+    paths:
+      - 'Dockerfile'
+      - 'nginx.conf'
+      - 'build.sh'
+      - 'push.sh'
+      - '.github/workflows/janus-docker.yml'
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Janus version to build (e.g., 0.0.1)'
+        required: true
+        default: '0.0.1'
+      push_to_registry:
+        description: 'Push to Docker registries'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
       logLevel:
         description: 'Log level'
         required: true
@@ -13,48 +35,211 @@ on:
           - warning
           - debug
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   APP_NAME: janus
-  DOCKERHUB_REPO: bytedesk/janus
+  IMAGE_NAME: bytedesk/janus
+  ALIYUN_IMAGE_NAME: registry.cn-hangzhou.aliyuncs.com/bytedesk/janus
 
 jobs:
-  docker:
+  build-and-push:
+    name: Build and Push Janus Docker Image
     runs-on: ubuntu-latest
+
     steps:
-      -
-        name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4.2.2
-      -
-        name: Set up QEMU
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#janus-v}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Building Janus version: ${VERSION}"
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.6.0
-      -
-        name: Set up Docker Buildx
+
+      - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3.11.1
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
+        with:
+          version: latest
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.HUB_USER }}
           password: ${{ secrets.HUB_PWD }}
-      - 
-        name: Generate App Version
-        run: echo APP_VERSION=1.3.3-muti >> $GITHUB_ENV
-      -
-        name: Build and push
+          logout: false
+
+      - name: Login to Aliyun Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.cn-hangzhou.aliyuncs.com
+          username: ${{ secrets.ALIYUN_DOCKER_USERNAME }}
+          password: ${{ secrets.ALIYUN_DOCKER_PASSWORD }}
+          logout: false
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+            ${{ env.ALIYUN_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.VERSION }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=ByteDesk Janus
+            org.opencontainers.image.description=Janus Docker image for ByteDesk
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
+            org.opencontainers.image.vendor=ByteDesk
+            maintainer=ByteDesk <270580156@qq.com>
+
+      - name: Build and push to Aliyun Docker Registry
         uses: docker/build-push-action@v6.18.0
         with:
           context: .
-          platforms: |
-            linux/amd64
-            linux/arm/v7
-            linux/arm64/v8
-            linux/arm64
-            linux/ppc64le
-            linux/s390x
-          push: true
+          file: ./Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/arm64,linux/ppc64le,linux/s390x
+          push: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false' }}
+          tags: |
+            ${{ env.ALIYUN_IMAGE_NAME }}:latest
+            ${{ env.ALIYUN_IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
           build-args: |
             APP_NAME=${{ env.APP_NAME }}
             APP_VERSION=${{ env.APP_VERSION }}
+            BUILD_DATE=${{ steps.meta.outputs.created }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.version.outputs.VERSION }}
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/arm64,linux/ppc64le,linux/s390x
+          push: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false' }}
           tags: |
-            ${{ env.DOCKERHUB_REPO }}:latest
-            ${{ env.DOCKERHUB_REPO }}:${{ env.APP_VERSION }}
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          build-args: |
+            APP_NAME=${{ env.APP_NAME }}
+            APP_VERSION=${{ env.APP_VERSION }}
+            BUILD_DATE=${{ steps.meta.outputs.created }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.version.outputs.VERSION }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/janus-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Janus v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Janus Docker 镜像发布
+
+            **版本**: ${{ steps.version.outputs.VERSION }}
+
+            ### 📦 Docker 镜像
+
+            #### Docker Hub
+            ```bash
+            docker pull bytedesk/janus:${{ steps.version.outputs.VERSION }}
+            # 或者
+            docker pull bytedesk/janus:latest
+            ```
+
+            #### 阿里云镜像仓库（中国大陆用户推荐）
+            ```bash
+            docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:${{ steps.version.outputs.VERSION }}
+            # 或者
+            docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:latest
+            ```
+
+            ---
+
+            **构建时间**: ${{ steps.meta.outputs.created }}
+            **提交 SHA**: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Summary
+        run: |
+          echo "## 🎉 Janus Docker 镜像构建完成" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 镜像信息" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本**: ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **平台**: linux/amd64, linux/arm/v7, linux/arm64/v8, linux/arm64, linux/ppc64le, linux/s390x" >> $GITHUB_STEP_SUMMARY
+          echo "- **构建时间**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Docker Hub" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull bytedesk/janus:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ☁️ 阿里云镜像仓库" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  test-image:
+    name: Test Janus Docker Image
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false'
+
+    steps:
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#janus-v}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Pull and test Docker Hub image
+        run: |
+          docker pull bytedesk/janus:${{ steps.version.outputs.VERSION }}
+          docker run -d --name janus-test bytedesk/janus:${{ steps.version.outputs.VERSION }}
+          sleep 20
+          docker ps -a
+          docker logs janus-test || true
+          docker stop janus-test || true
+          docker rm janus-test || true
+
+      - name: Pull and test Aliyun image
+        run: |
+          docker pull registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:${{ steps.version.outputs.VERSION }}
+          docker run -d --name janus-test-aliyun registry.cn-hangzhou.aliyuncs.com/bytedesk/janus:${{ steps.version.outputs.VERSION }}
+          sleep 20
+          docker ps -a
+          docker logs janus-test-aliyun || true
+          docker stop janus-test-aliyun || true
+          docker rm janus-test-aliyun || true
