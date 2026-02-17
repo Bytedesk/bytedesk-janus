@@ -14,7 +14,7 @@ on:
           - debug
 
 env:
-  APP_NAME: janus-webrtc-gateway-docker
+  APP_NAME: janus
   DOCKERHUB_REPO: bytedesk/janus
 
 jobs:
