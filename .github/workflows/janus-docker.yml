@@ -3,20 +3,17 @@ name: Build Janus Docker
 on:
   push:
     tags:
-      # 匹配 janus-v 开头的标签，例如: janus-v0.0.1
+      # 匹配 janus-v 开头的标签，例如: janus-v1.4.0
       - 'janus-v*'
     paths:
       - 'Dockerfile'
-      - 'nginx.conf'
-      - 'build.sh'
-      - 'push.sh'
       - '.github/workflows/janus-docker.yml'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Janus version to build (e.g., 0.0.1)'
+        description: 'Janus version to build (e.g., 1.4.0)'
         required: true
-        default: '0.0.1'
+        default: '1.4.0'
       push_to_registry:
         description: 'Push to Docker registries'
         required: true

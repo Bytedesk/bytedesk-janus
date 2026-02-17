@@ -136,7 +136,7 @@ RUN apt-get update -y && apt-get install libavutil56 libavcodec58 libavformat58 
 
 # janus
 RUN cd / &&  git clone https://github.com/meetecho/janus-gateway.git && cd /janus-gateway && \
-    git checkout refs/tags/v1.3.3&& \
+    git checkout refs/tags/v1.4.0&& \
     sh autogen.sh &&  \
     ./configure --prefix=/usr/local \
 	--enable-post-processing \
@@ -150,14 +150,10 @@ RUN cd / &&  git clone https://github.com/meetecho/janus-gateway.git && cd /janu
 #FFmpeg install
 RUN apt update -y && sudo apt install  -y ffmpeg && ffmpeg -version
 
-# nginx
-RUN apt-get update -y && apt-get install -y nginx
-COPY nginx.conf /etc/nginx/nginx.conf
-
 RUN apt-get clean && \
 	rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-l", "-euxo", "pipefail", "-c"]
 
-CMD nginx && janus
+CMD ["janus"]
 
