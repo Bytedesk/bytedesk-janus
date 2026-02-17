@@ -24,7 +24,8 @@ Janus Gateway Docker image for ByteDesk, based on Ubuntu 22.04 LTS.
 
 - ✅ Janus Gateway `v1.4.0` (built from source)
 - ✅ Ubuntu `22.04` base image
-- ✅ Built-in dependencies for WebRTC stack (`libwebsockets`, `libsrtp`, `libnice`, `usrsctp`)
+- ✅ Built-in dependencies for WebRTC stack
+  (`libwebsockets`, `libsrtp`, `libnice`, `usrsctp`)
 - ✅ Janus built with `--enable-post-processing`
 - ✅ `FFmpeg` included for post-processing workflows
 - ✅ Multi-architecture image publishing via GitHub Actions
@@ -61,7 +62,8 @@ docker run -d \
 
 ## Configuration
 
-Janus config files are generated during build by `make configs` and installed under `/usr/local/etc/janus`.
+Janus config files are generated during build by `make configs`
+and installed under `/usr/local/etc/janus`.
 
 To customize configuration, mount your config directory:
 
@@ -100,9 +102,7 @@ git push origin janus-v1.4.0
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TZ` | Container timezone | `Asia/Shanghai` |
+- `TZ`: Container timezone (default: `Asia/Shanghai`)
 
 Most Janus runtime behavior is controlled by files in `/usr/local/etc/janus`.
 
@@ -110,11 +110,9 @@ Most Janus runtime behavior is controlled by files in `/usr/local/etc/janus`.
 
 Janus ports depend on your `janus.jcfg` and plugin configs. Common mappings:
 
-| Port | Protocol | Typical Usage |
-|------|----------|---------------|
-| `8088` | TCP | Janus HTTP API |
-| `8188` | TCP | Janus WebSocket API |
-| `10000-10200` | UDP | RTP media ports (example range) |
+- `8088`/TCP: Janus HTTP API
+- `8188`/TCP: Janus WebSocket API
+- `10000-10200`/UDP: RTP media ports (example range)
 
 Adjust these to match your deployed Janus configuration.
 

@@ -100,9 +100,7 @@ git push origin janus-v1.4.0
 
 ## 环境变量
 
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `TZ` | 容器时区 | `Asia/Shanghai` |
+- `TZ`：容器时区（默认值：`Asia/Shanghai`）
 
 Janus 的大多数运行行为由 `/usr/local/etc/janus` 下配置文件控制。
 
@@ -110,11 +108,9 @@ Janus 的大多数运行行为由 `/usr/local/etc/janus` 下配置文件控制�
 
 Janus 端口最终以 `janus.jcfg` 与各插件配置为准。常见端口如下：
 
-| 端口 | 协议 | 常见用途 |
-|------|------|----------|
-| `8088` | TCP | Janus HTTP API |
-| `8188` | TCP | Janus WebSocket API |
-| `10000-10200` | UDP | RTP 媒体端口（示例范围） |
+- `8088`/TCP：Janus HTTP API
+- `8188`/TCP：Janus WebSocket API
+- `10000-10200`/UDP：RTP 媒体端口（示例范围）
 
 请根据你实际部署的 Janus 配置调整端口映射。
 
